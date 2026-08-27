@@ -1,0 +1,37 @@
+# Environment variables / API keys
+.env
+.env.*
+!.env.example
+
+# Python virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Node.js dependencies
+node_modules/
+
+# Frontend build output
+dist/
+build/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+
+# Uploaded files
+backend/uploads/
