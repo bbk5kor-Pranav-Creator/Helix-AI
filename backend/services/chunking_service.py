@@ -1,34 +1,14 @@
-"""
-Chunking service for Helix AI URL analysis.
-
-Takes Markdown returned by Firecrawl and converts it into
-logical chunks suitable for later RAG retrieval.
-"""
+"""Convert Firecrawl Markdown into logical RAG chunks."""
 
 import re
-from typing import List, Dict
+from typing import Dict, List
 
 
-# =========================================================
-# Configuration
-# =========================================================
+DEFAULT_MAX_CHARS = 3500
 
-# Approximate target size for each chunk.
-TARGET_CHUNK_SIZE = 1200
-
-# Prevent a single chunk from becoming excessively large.
-MAX_CHUNK_SIZE = 1800
-
-# Small overlap helps preserve context between adjacent chunks.
-CHUNK_OVERLAP = 150
-
-
-# =========================================================
-# Text Helpers
-# =========================================================
 
 def normalize_text(text: str) -> str:
-    """Normalize excessive whitespace without destroying Markdown."""
+    """Normalize line endings and excessive blank lines."""
 
     if not text:
         return ""
@@ -36,58 +16,38 @@ def normalize_text(text: str) -> str:
     text = text.replace("\r\n", "\n")
     text = text.replace("\r", "\n")
 
-    # Remove trailing whitespace from lines.
-    lines = [
-        line.rstrip()
-        for line in text.split("\n")
-    ]
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text
+    )
 
-    # Collapse excessive blank lines.
-    cleaned_lines = []
-
-    previous_blank = False
-
-    for line in lines:
-
-        if not line.strip():
-
-            if previous_blank:
-                continue
-
-            previous_blank = True
-            cleaned_lines.append("")
-
-        else:
-
-            previous_blank = False
-            cleaned_lines.append(line)
-
-    return "\n".join(cleaned_lines).strip()
+    return text.strip()
 
 
 def clean_chunk_text(text: str) -> str:
-    """Clean a chunk while preserving useful Markdown structure."""
+    """Clean chunk whitespace while preserving Markdown structure."""
 
     if not text:
         return ""
 
     text = normalize_text(text)
 
-    # Remove excessive spaces.
-    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(
+        r"[ \t]{3,}",
+        " ",
+        text
+    )
 
     return text.strip()
 
 
-# =========================================================
-# Markdown Sections
-# =========================================================
-
 def split_into_sections(markdown: str) -> List[Dict]:
     """
-    Split Markdown into logical sections based on headings.
+    Split Markdown into logical sections.
 
-    Each section keeps its heading and body together.
+    Each Markdown heading starts a new section and the heading
+    is preserved separately as metadata.
     """
 
     markdown = normalize_text(markdown)
@@ -97,31 +57,29 @@ def split_into_sections(markdown: str) -> List[Dict]:
 
     lines = markdown.split("\n")
 
-    sections = []
+    sections: List[Dict] = []
 
     current_heading = ""
     current_level = 0
-    current_lines = []
+    current_lines: List[str] = []
 
     heading_pattern = re.compile(
-        r"^(#{1,6})\s+(.+?)\s*$"
+        r"^(#{1,6})[ \t]+(.+?)\s*$"
     )
 
-    def flush_section():
-
+    def flush_section() -> None:
         nonlocal current_lines
 
-        body = clean_chunk_text(
+        content = clean_chunk_text(
             "\n".join(current_lines)
         )
 
-        if body:
-
+        if content:
             sections.append(
                 {
                     "heading": current_heading,
                     "level": current_level,
-                    "content": body,
+                    "content": content,
                 }
             )
 
@@ -129,180 +87,193 @@ def split_into_sections(markdown: str) -> List[Dict]:
 
     for line in lines:
 
-        match = heading_pattern.match(line.strip())
+        stripped = line.strip()
+
+        match = heading_pattern.match(
+            stripped
+        )
 
         if match:
 
             flush_section()
 
-            current_level = len(match.group(1))
-            current_heading = match.group(2).strip()
+            current_level = len(
+                match.group(1)
+            )
+
+            current_heading = (
+                match.group(2).strip()
+            )
 
         else:
 
-            current_lines.append(line)
+            current_lines.append(
+                line
+            )
 
     flush_section()
 
     return sections
 
 
-# =========================================================
-# Long Section Splitting
-# =========================================================
-
-def split_long_text(
-    text: str,
-    max_size: int = MAX_CHUNK_SIZE,
-    overlap: int = CHUNK_OVERLAP,
-) -> List[str]:
+def split_long_section(
+    section: Dict,
+    max_chars: int = DEFAULT_MAX_CHARS
+) -> List[Dict]:
     """
-    Split an oversized section while attempting to preserve
-    paragraph and sentence boundaries.
+    Split an oversized section by paragraph boundaries.
+
+    The section heading is preserved for every resulting part.
     """
 
-    text = clean_chunk_text(text)
+    heading = (
+        section.get("heading")
+        or ""
+    ).strip()
 
-    if len(text) <= max_size:
-        return [text]
+    level = int(
+        section.get(
+            "level",
+            0
+        )
+    )
+
+    content = (
+        section.get("content")
+        or ""
+    ).strip()
+
+    if not content:
+        return []
+
+    section_text = (
+        f"# {heading}\n\n{content}"
+        if heading
+        else content
+    )
+
+    if len(section_text) <= max_chars:
+
+        return [
+            {
+                "heading": heading,
+                "level": level,
+                "content": section_text,
+            }
+        ]
 
     paragraphs = [
-        p.strip()
-        for p in re.split(r"\n{2,}", text)
-        if p.strip()
+        paragraph.strip()
+        for paragraph in re.split(
+            r"\n\s*\n",
+            content
+        )
+        if paragraph.strip()
     ]
 
-    chunks = []
-    current = ""
+    chunks: List[Dict] = []
+
+    current_content = ""
 
     for paragraph in paragraphs:
 
         candidate = (
             paragraph
-            if not current
-            else current + "\n\n" + paragraph
+            if not current_content
+            else f"{current_content}\n\n{paragraph}"
         )
 
-        if len(candidate) <= max_size:
+        candidate_text = (
+            f"# {heading}\n\n{candidate}"
+            if heading
+            else candidate
+        )
 
-            current = candidate
+        if len(candidate_text) <= max_chars:
+
+            current_content = candidate
+
             continue
 
-        if current:
+        if current_content:
 
-            chunks.append(current)
-
-        # If one paragraph itself is too large,
-        # split it around sentence boundaries.
-        if len(paragraph) > max_size:
-
-            sentences = re.split(
-                r"(?<=[.!?])\s+",
-                paragraph
+            current_text = (
+                f"# {heading}\n\n{current_content}"
+                if heading
+                else current_content
             )
 
-            sentence_chunk = ""
+            chunks.append(
+                {
+                    "heading": heading,
+                    "level": level,
+                    "content": current_text,
+                }
+            )
 
-            for sentence in sentences:
+        current_content = paragraph
 
-                candidate_sentence = (
-                    sentence
-                    if not sentence_chunk
-                    else sentence_chunk
-                    + " "
-                    + sentence
-                )
+    if current_content:
 
-                if len(candidate_sentence) <= max_size:
-
-                    sentence_chunk = candidate_sentence
-
-                else:
-
-                    if sentence_chunk:
-                        chunks.append(
-                            sentence_chunk.strip()
-                        )
-
-                    sentence_chunk = sentence
-
-            if sentence_chunk:
-                current = sentence_chunk.strip()
-
-            else:
-                current = ""
-
-        else:
-
-            current = paragraph
-
-    if current:
-        chunks.append(current)
-
-    # Add small overlap between chunks where possible.
-    if overlap <= 0 or len(chunks) <= 1:
-        return chunks
-
-    overlapped = []
-
-    for index, chunk in enumerate(chunks):
-
-        if index == 0:
-
-            overlapped.append(chunk)
-            continue
-
-        previous = chunks[index - 1]
-
-        overlap_text = previous[-overlap:]
-
-        combined = (
-            overlap_text
-            + "\n\n"
-            + chunk
+        current_text = (
+            f"# {heading}\n\n{current_content}"
+            if heading
+            else current_content
         )
 
-        # Do not allow overlap to make a chunk
-        # exceed our maximum limit.
-        if len(combined) <= max_size + overlap:
+        chunks.append(
+            {
+                "heading": heading,
+                "level": level,
+                "content": current_text,
+            }
+        )
 
-            overlapped.append(combined)
+    return chunks
 
-        else:
-
-            overlapped.append(chunk)
-
-    return overlapped
-
-
-# =========================================================
-# Build Chunks
-# =========================================================
 
 def chunk_markdown(
     markdown: str,
     source_url: str = "",
     title: str = "",
+    max_chars: int = DEFAULT_MAX_CHARS
 ) -> List[Dict]:
     """
     Convert Firecrawl Markdown into RAG-ready chunks.
 
-    Each chunk contains:
+    Pipeline:
 
-        id
-        text
-        heading
-        level
-        source_url
-        title
-        chunk_index
+        Markdown
+            ↓
+        Normalize
+            ↓
+        Heading-based sections
+            ↓
+        Split oversized sections
+            ↓
+        Helix chunk objects
     """
 
-    sections = split_into_sections(markdown)
+    if not markdown:
+        return []
 
+    markdown = normalize_text(
+        markdown
+    )
+
+    if not markdown:
+        return []
+
+    sections = split_into_sections(
+        markdown
+    )
+
+    # Handle Markdown without headings.
     if not sections:
 
-        cleaned = clean_chunk_text(markdown)
+        cleaned = clean_chunk_text(
+            markdown
+        )
 
         if not cleaned:
             return []
@@ -315,42 +286,39 @@ def chunk_markdown(
             }
         ]
 
-    chunks = []
+    chunks: List[Dict] = []
 
     for section in sections:
 
-        heading = section["heading"]
-        level = section["level"]
-        content = section["content"]
-
-        if heading:
-
-            section_text = (
-                f"# {heading}\n\n"
-                f"{content}"
-            )
-
-        else:
-
-            section_text = content
-
-        parts = split_long_text(
-            section_text
+        parts = split_long_section(
+            section,
+            max_chars=max_chars
         )
 
         for part in parts:
 
-            part = clean_chunk_text(part)
+            text = clean_chunk_text(
+                part.get(
+                    "content",
+                    ""
+                )
+            )
 
-            if not part:
+            if not text:
                 continue
 
             chunks.append(
                 {
                     "id": len(chunks),
-                    "text": part,
-                    "heading": heading,
-                    "level": level,
+                    "text": text,
+                    "heading": part.get(
+                        "heading",
+                        ""
+                    ),
+                    "level": part.get(
+                        "level",
+                        0
+                    ),
                     "source_url": source_url,
                     "title": title,
                     "chunk_index": len(chunks),

@@ -134,6 +134,26 @@ def init_db():
 
 
         # =====================================================
+        # NEW: URL ANALYSIS HISTORY
+        # =====================================================
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS url_analyses (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                url               TEXT NOT NULL,
+                title             TEXT,
+                instruction       TEXT,
+                answer            TEXT,
+                chunks_json       TEXT,
+                chunks_used       INTEGER DEFAULT 0,
+                model             TEXT,
+                extraction_method TEXT,
+                created_at        TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
+
+        # =====================================================
         # NEW: WEBSITE CHAT SESSIONS
         # =====================================================
 
@@ -147,9 +167,22 @@ def init_db():
             )
         """)
 
+        # Links a chat session back to the analysis it continues.
+        try:
+            conn.execute(
+                "ALTER TABLE website_sessions ADD COLUMN analysis_id INTEGER"
+            )
+        except Exception:
+            pass
+
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_website_sessions_url
             ON website_sessions(url)
+        """)
+
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_website_sessions_analysis
+            ON website_sessions(analysis_id)
         """)
 
 
