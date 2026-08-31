@@ -748,16 +748,44 @@ export default function UploadURL() {
 
   // -------------------- MARKDOWN COMPONENTS --------------------
   const markdownComponents = {
-    h1: ({ children }) => <Typography variant="h4" sx={{ color: '#fff', fontWeight: 800, mt: 3, mb: 2 }}>{children}</Typography>,
-    h2: ({ children }) => <Typography variant="h5" sx={{ color: '#fff', fontWeight: 750, mt: 3.5, mb: 2 }}>{children}</Typography>,
-    h3: ({ children }) => <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mt: 3, mb: 1.5 }}>{children}</Typography>,
-    p: ({ children }) => <Typography component="p" sx={{ color: '#cbd9e5', fontSize: '15.5px', lineHeight: 1.85, mb: 2 }}>{children}</Typography>,
-    ul: ({ children }) => <Box component="ul" sx={{ color: '#cbd9e5', pl: 3, mb: 2 }}>{children}</Box>,
-    ol: ({ children }) => <Box component="ol" sx={{ color: '#cbd9e5', pl: 3, mb: 2 }}>{children}</Box>,
-    li: ({ children }) => <Box component="li" sx={{ color: '#cbd9e5', mb: 1, lineHeight: 1.75 }}>{children}</Box>,
+    h1: ({ children }) => <Typography variant="h4" sx={{ color: '#fff', fontWeight: 800, mt: 3, mb: 2, lineHeight: 1.3 }}>{children}</Typography>,
+    h2: ({ children }) => <Typography variant="h5" sx={{ color: '#fff', fontWeight: 750, mt: 3.5, mb: 2, lineHeight: 1.3 }}>{children}</Typography>,
+    h3: ({ children }) => <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mt: 3, mb: 1.5, lineHeight: 1.35 }}>{children}</Typography>,
+    h4: ({ children }) => <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, mt: 2.5, mb: 1.25 }}>{children}</Typography>,
+    h5: ({ children }) => <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 700, mt: 2, mb: 1 }}>{children}</Typography>,
+    h6: ({ children }) => <Typography variant="subtitle2" sx={{ color: '#e2e8f0', fontWeight: 700, mt: 2, mb: 1 }}>{children}</Typography>,
+    p: ({ children }) => <Typography component="p" sx={{ color: '#cbd9e5', fontSize: '15.5px', lineHeight: 1.85, mb: 2, '&:last-child': { mb: 0 } }}>{children}</Typography>,
+    ul: ({ children }) => <Box component="ul" sx={{ color: '#cbd9e5', pl: 3, mb: 2, '& li::marker': { color: '#7a9bb5' } }}>{children}</Box>,
+    ol: ({ children }) => <Box component="ol" sx={{ color: '#cbd9e5', pl: 3, mb: 2, '& li::marker': { color: '#7a9bb5' } }}>{children}</Box>,
+    li: ({ children }) => <Box component="li" sx={{ color: '#cbd9e5', mb: 1, lineHeight: 1.75, pl: 0.5 }}>{children}</Box>,
     strong: ({ children }) => <Box component="strong" sx={{ color: '#fff', fontWeight: 750 }}>{children}</Box>,
+    em: ({ children }) => <Box component="em" sx={{ color: 'inherit', fontStyle: 'italic' }}>{children}</Box>,
+    code: ({ children }) => (
+      <Box component="code" sx={{ backgroundColor: '#1d3852', color: '#7dd3fc', px: 0.8, py: 0.2, borderRadius: 1, fontSize: '0.9em', fontFamily: 'monospace', wordBreak: 'break-word' }}>
+        {children}
+      </Box>
+    ),
+    // "pre" always wraps block code, so it resets the inline "code" badge styling for real code blocks.
+    pre: ({ children }) => (
+      <Box
+        component="pre"
+        sx={{
+          backgroundColor: '#0f2338',
+          border: '1px solid #29445c',
+          borderRadius: 2,
+          p: 2,
+          mb: 2,
+          overflowX: 'auto',
+          fontSize: '0.88em',
+          lineHeight: 1.6,
+          '& code': { backgroundColor: 'transparent', color: '#e2e8f0', padding: 0, borderRadius: 0 }
+        }}
+      >
+        {children}
+      </Box>
+    ),
     a: ({ href, children }) => (
-      <Box component="a" href={href} target="_blank" rel="noopener noreferrer" sx={{ color: '#38bdf8', textDecoration: 'none', '&:hover': { textDecoration: 'underline', color: '#7dd3fc' } }}>
+      <Box component="a" href={href} target="_blank" rel="noopener noreferrer" sx={{ color: '#38bdf8', textDecoration: 'none', wordBreak: 'break-word', '&:hover': { textDecoration: 'underline', color: '#7dd3fc' } }}>
         {children}
       </Box>
     ),
@@ -767,15 +795,19 @@ export default function UploadURL() {
       </Box>
     ),
     table: ({ children }) => (
-      <Box sx={{ width: '100%', overflowX: 'auto', mb: 3 }}>
-        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', color: '#dce7ef' }}>{children}</Box>
+      <Box sx={{ width: '100%', overflowX: 'auto', overflowY: 'hidden', mb: 3, borderRadius: 2, border: '1px solid #29445c' }}>
+        <Box component="table" sx={{ width: '100%', minWidth: 420, borderCollapse: 'collapse', color: '#dce7ef' }}>{children}</Box>
       </Box>
     ),
     thead: ({ children }) => <Box component="thead" sx={{ backgroundColor: '#1d3852' }}>{children}</Box>,
-    tbody: ({ children }) => <Box component="tbody" sx={{ backgroundColor: '#102337' }}>{children}</Box>,
+    tbody: ({ children }) => (
+      <Box component="tbody" sx={{ backgroundColor: '#102337', '& tr:nth-of-type(even)': { backgroundColor: '#0d1e30' } }}>
+        {children}
+      </Box>
+    ),
     tr: ({ children }) => <Box component="tr" sx={{ borderBottom: '1px solid #29445c' }}>{children}</Box>,
-    th: ({ children }) => <Box component="th" sx={{ padding: '12px', textAlign: 'left', color: '#fff', fontWeight: 700, border: '1px solid #29445c' }}>{children}</Box>,
-    td: ({ children }) => <Box component="td" sx={{ padding: '12px', color: '#cbd9e5', border: '1px solid #29445c', verticalAlign: 'top' }}>{children}</Box>,
+    th: ({ children }) => <Box component="th" sx={{ padding: '12px 14px', textAlign: 'left', color: '#fff', fontWeight: 700, border: '1px solid #29445c', whiteSpace: 'nowrap' }}>{children}</Box>,
+    td: ({ children }) => <Box component="td" sx={{ padding: '12px 14px', color: '#cbd9e5', border: '1px solid #29445c', verticalAlign: 'top', fontSize: '14.5px' }}>{children}</Box>,
     hr: () => <Divider sx={{ borderColor: '#29445c', my: 3 }} />
   }
 

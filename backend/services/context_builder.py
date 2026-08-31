@@ -29,7 +29,9 @@ STRUCTURAL_NOISE_HEADINGS = {
     "bibliography",
     "sources",
     "related articles",
+    "related posts",
     "navigation",
+    "footer",
 }
 
 

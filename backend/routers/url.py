@@ -16,7 +16,7 @@ from database import db
 from services.content_cleaner import clean_markdown
 from services.chunking_service import chunk_markdown
 from services.rag_service import retrieve_relevant_chunks
-from services.answer_generator import generate_answer
+from services.answer_generator import generate_answer, rewrite_followup_question
 from services.context_builder import build_rag_context
 
 
@@ -906,11 +906,46 @@ def send_conversation_message(
                 analysis_row["chunks_json"]
             )
 
+            history_rows = conn.execute(
+                """
+                SELECT role, message
+                FROM website_messages
+                WHERE session_id = ?
+                ORDER BY id DESC
+                LIMIT 10
+                """,
+                (
+                    request.session_id,
+                )
+            ).fetchall()
+
+            conversation_history = [
+                {"role": row["role"], "message": row["message"]}
+                for row in reversed(history_rows)
+            ]
+
+            print("\n" + "=" * 60)
+            print("HELIX AI — CONVERSATION MESSAGE")
+            print("=" * 60)
+            print("[RAG] Question:", question)
+
+            if conversation_history:
+                retrieval_question = rewrite_followup_question(
+                    question,
+                    conversation_history
+                )
+            else:
+                retrieval_question = question
+
+            print("[RAG] Rewritten question:", retrieval_question)
+
             relevant_chunks = retrieve_relevant_chunks(
                 chunks=chunks,
-                question=question,
+                question=retrieval_question,
                 top_k=RAG_TOP_K
             )
+
+            print("[RAG] Retrieved chunks:", len(relevant_chunks))
 
             if not relevant_chunks:
                 raise ValueError(
@@ -921,7 +956,8 @@ def send_conversation_message(
                 question=question,
                 source_url=session_row["url"],
                 page_title=session_row["title"],
-                relevant_chunks=relevant_chunks
+                relevant_chunks=relevant_chunks,
+                conversation_history=conversation_history
             )
 
             conn.execute(

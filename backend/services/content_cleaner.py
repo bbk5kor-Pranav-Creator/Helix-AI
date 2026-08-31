@@ -63,6 +63,13 @@ def clean_markdown(text: str) -> str:
         r"(?im)^.*?(?:subscribe|newsletter).*$",
         r"(?im)^.*?(?:cookie policy|privacy policy).*$",
         r"(?im)^.*?(?:accept cookies|manage cookies).*$",
+        r"(?im)^.*?(?:share this|follow us on|follow us|like us on).*$",
+        r"(?im)^.*?all rights reserved.*$",
+        r"(?im)^\s*(?:\^\s*)?back to top\s*$",
+        # Breadcrumb-style Markdown-link chains, e.g. "[Home](/) | [About](/about)".
+        # Intentionally restricted to linked breadcrumbs (not plain "|" text) so
+        # real content such as Markdown tables is never stripped.
+        r"(?im)^\s*(?:\[[^\]]+\]\([^)]*\)\s*(?:[|>›])\s*)+\[[^\]]+\]\([^)]*\)\s*$",
     ]
 
     for pattern in noise_patterns:

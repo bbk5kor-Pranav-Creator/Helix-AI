@@ -116,12 +116,59 @@ def split_into_sections(markdown: str) -> List[Dict]:
     return sections
 
 
+SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+
+OVERLAP_CHARS = 200
+
+
+def _split_oversized_paragraph(
+    paragraph: str,
+    max_chars: int
+) -> List[str]:
+    """Fall back to sentence boundaries when a single paragraph is too large."""
+
+    if len(paragraph) <= max_chars:
+        return [paragraph]
+
+    sentences = [
+        sentence.strip()
+        for sentence in SENTENCE_SPLIT_PATTERN.split(paragraph)
+        if sentence.strip()
+    ]
+
+    if len(sentences) <= 1:
+        return [paragraph]
+
+    return sentences
+
+
+def _tail_overlap(
+    text: str,
+    overlap_chars: int = OVERLAP_CHARS
+) -> str:
+    """Return a trailing slice of text, snapped to the last sentence boundary."""
+
+    if not text or len(text) <= overlap_chars:
+        return ""
+
+    tail = text[-overlap_chars:]
+
+    boundary = re.search(r"[.!?]\s+", tail)
+
+    if boundary:
+        tail = tail[boundary.end():]
+
+    return tail.strip()
+
+
 def split_long_section(
     section: Dict,
     max_chars: int = DEFAULT_MAX_CHARS
 ) -> List[Dict]:
     """
-    Split an oversized section by paragraph boundaries.
+    Split an oversized section by paragraph boundaries, falling back to
+    sentence boundaries for oversized paragraphs, with controlled overlap
+    carried forward between resulting parts.
 
     The section heading is preserved for every resulting part.
     """
@@ -162,7 +209,7 @@ def split_long_section(
             }
         ]
 
-    paragraphs = [
+    raw_paragraphs = [
         paragraph.strip()
         for paragraph in re.split(
             r"\n\s*\n",
@@ -171,7 +218,14 @@ def split_long_section(
         if paragraph.strip()
     ]
 
-    chunks: List[Dict] = []
+    paragraphs: List[str] = []
+
+    for paragraph in raw_paragraphs:
+        paragraphs.extend(
+            _split_oversized_paragraph(paragraph, max_chars)
+        )
+
+    raw_contents: List[str] = []
 
     current_content = ""
 
@@ -196,29 +250,29 @@ def split_long_section(
             continue
 
         if current_content:
-
-            current_text = (
-                f"# {heading}\n\n{current_content}"
-                if heading
-                else current_content
-            )
-
-            chunks.append(
-                {
-                    "heading": heading,
-                    "level": level,
-                    "content": current_text,
-                }
-            )
+            raw_contents.append(current_content)
 
         current_content = paragraph
 
     if current_content:
+        raw_contents.append(current_content)
+
+    chunks: List[Dict] = []
+
+    for index, raw_content in enumerate(raw_contents):
+
+        # Carry the tail of the previous part forward for continuity.
+        if index > 0:
+
+            overlap = _tail_overlap(raw_contents[index - 1])
+
+            if overlap and not raw_content.startswith(overlap):
+                raw_content = f"{overlap}\n\n{raw_content}"
 
         current_text = (
-            f"# {heading}\n\n{current_content}"
+            f"# {heading}\n\n{raw_content}"
             if heading
-            else current_content
+            else raw_content
         )
 
         chunks.append(
