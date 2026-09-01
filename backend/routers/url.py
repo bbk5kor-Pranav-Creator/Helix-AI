@@ -797,18 +797,26 @@ def start_conversation(
                 "A source is required to start a conversation."
             )
 
+        source_type = (
+            request.source_type or "website"
+        ).strip().lower()
+
+        if source_type != "pdf":
+            source_type = "website"
+
         with db() as conn:
 
             cursor = conn.execute(
                 """
                 INSERT INTO website_sessions
-                (url, title, analysis_id)
-                VALUES (?, ?, ?)
+                (url, title, analysis_id, source_type)
+                VALUES (?, ?, ?, ?)
                 """,
                 (
                     source,
                     (request.title or "").strip(),
-                    request.analysis_id
+                    request.analysis_id,
+                    source_type
                 )
             )
 
@@ -869,7 +877,7 @@ def send_conversation_message(
 
             session_row = conn.execute(
                 """
-                SELECT id, url, title, analysis_id
+                SELECT id, url, title, analysis_id, source_type
                 FROM website_sessions
                 WHERE id = ?
                 """,
@@ -883,10 +891,13 @@ def send_conversation_message(
                     "This conversation is no longer available."
                 )
 
+            source_type = session_row["source_type"] or "website"
+            analysis_table = "pdf_analyses" if source_type == "pdf" else "url_analyses"
+
             analysis_row = conn.execute(
-                """
+                f"""
                 SELECT chunks_json
-                FROM url_analyses
+                FROM {analysis_table}
                 WHERE id = ?
                 """,
                 (
@@ -957,7 +968,8 @@ def send_conversation_message(
                 source_url=session_row["url"],
                 page_title=session_row["title"],
                 relevant_chunks=relevant_chunks,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
+                source_type=source_type
             )
 
             conn.execute(
@@ -1136,6 +1148,7 @@ def get_url_history_item(
                 SELECT id
                 FROM website_sessions
                 WHERE analysis_id = ?
+                  AND source_type = 'website'
                 ORDER BY id DESC
                 LIMIT 1
                 """,
@@ -1208,6 +1221,7 @@ def delete_url_history_item(
                 SELECT id
                 FROM website_sessions
                 WHERE analysis_id = ?
+                  AND source_type = 'website'
                 """,
                 (
                     analysis_id,
@@ -1282,11 +1296,16 @@ def clear_url_history():
         with db() as conn:
 
             conn.execute(
-                "DELETE FROM website_messages"
+                """
+                DELETE FROM website_messages
+                WHERE session_id IN (
+                    SELECT id FROM website_sessions WHERE source_type = 'website'
+                )
+                """
             )
 
             conn.execute(
-                "DELETE FROM website_sessions"
+                "DELETE FROM website_sessions WHERE source_type = 'website'"
             )
 
             conn.execute(

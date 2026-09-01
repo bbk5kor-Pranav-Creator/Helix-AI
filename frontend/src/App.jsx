@@ -9,6 +9,7 @@ import TextAgent from './pages/TextAgent'
 import VoiceAgent from './pages/VoiceAgent'
 import UploadFiles from './pages/UploadFiles'
 import UploadURL from './pages/UploadURL'
+import UploadPDF from './pages/UploadPDF'
 import KnowledgeHub from './pages/KnowledgeHub'
 import ResourcePage from './pages/ResourcePage'
 
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="voice-agent"   element={<VoiceAgent />} />
             <Route path="upload"        element={<UploadFiles />} />
             <Route path="/upload-url" element={<UploadURL />} />
+            <Route path="/upload-pdf" element={<UploadPDF />} />
             <Route path="knowledge-hub" element={<KnowledgeHub />} />
             {RESOURCE_PAGES.map(p => (
               <Route key={p.path} path={p.path}

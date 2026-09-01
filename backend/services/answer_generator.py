@@ -175,18 +175,22 @@ def generate_answer(
     page_title: str,
     relevant_chunks: List[Dict],
     conversation_history: List[Dict] = None,
+    source_type: str = "website",
 ) -> str:
     """
     Generate a grounded answer using only the retrieved
-    website evidence.
+    evidence.
 
     Contract intentionally follows the WebLens answer
-    generation architecture.
+    generation architecture. `source_type` ("website" or "pdf")
+    only swaps a few wording labels below; the default keeps
+    the website flow's prompts byte-identical to before.
     """
 
     question = (question or "").strip()
     source_url = (source_url or "").strip()
     page_title = (page_title or "").strip()
+    is_pdf = source_type == "pdf"
 
     if not question:
         raise ValueError(
@@ -200,21 +204,24 @@ def generate_answer(
     if not context:
         return (
             "Helix AI could not find enough relevant "
-            "information on this website to answer "
+            f"information on this {'document' if is_pdf else 'website'} to answer "
             "your question."
         )
 
     history_text = _format_conversation_history(conversation_history)
 
-    system_prompt = """
-You are Helix AI, a precise website research assistant.
+    persona_noun = "document" if is_pdf else "website"
+    evidence_noun = "document" if is_pdf else "website"
+
+    system_prompt = f"""
+You are Helix AI, a precise {persona_noun} research assistant.
 
 Answer the user's question using ONLY the supplied
-website evidence.
+{evidence_noun} evidence.
 
 GROUNDING RULES:
 
-1. Use only the supplied website evidence and conversation
+1. Use only the supplied {evidence_noun} evidence and conversation
    history for resolving references.
 2. Do not use outside knowledge, assumptions, or memory.
 3. Do not invent facts, numbers, dates, or steps.
@@ -273,21 +280,26 @@ user.
         else ""
     )
 
+    title_label = "DOCUMENT TITLE" if is_pdf else "WEBSITE TITLE"
+    source_label = "SOURCE FILE" if is_pdf else "SOURCE URL"
+    evidence_label = "RETRIEVED DOCUMENT EVIDENCE" if is_pdf else "RETRIEVED WEBSITE EVIDENCE"
+    evidence_phrase = "retrieved document evidence" if is_pdf else "retrieved website evidence"
+
     user_prompt = f"""
-WEBSITE TITLE:
+{title_label}:
 {page_title or "Unknown"}
 
-SOURCE URL:
+{source_label}:
 {source_url or "Unknown"}
 
 {recent_conversation_block}USER QUESTION:
 {question}
 
-RETRIEVED WEBSITE EVIDENCE:
+{evidence_label}:
 
 {context}
 
-Using ONLY the retrieved website evidence above and the recent
+Using ONLY the {evidence_phrase} above and the recent
 conversation for resolving references, provide the best possible
 answer to the user's question.
 

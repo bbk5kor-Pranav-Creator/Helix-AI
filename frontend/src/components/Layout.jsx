@@ -9,7 +9,7 @@ import {
   Chat, Mic, CloudUpload, Share, Groups, Email,
   BugReport, Settings, AccountTree, RocketLaunch,
   Notifications, Help, Info, Home, MenuOpen, ChevronLeft,
-  MenuBook, Hub, Dashboard, Language
+  MenuBook, Hub, Dashboard, Language, PictureAsPdf
 } from '@mui/icons-material'
 
 const SIDEBAR_WIDTH     = 235
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { label: 'Voice Agent',     path: '/voice-agent',   icon: <Mic /> },
   { label: 'Upload Files',    path: '/upload',        icon: <CloudUpload /> },
   { label: 'Upload URL',      path: '/upload-url',    icon: <Language /> },
+  { label: 'Upload PDF',      path: '/upload-pdf',    icon: <PictureAsPdf /> },
   { label: 'Knowledge Hub',   path: '/knowledge-hub', icon: <Hub /> },
   { type: 'divider', label: 'Resources' },
   { label: 'Docupedia',       path: '/docupedia',     icon: <MenuBook /> },
@@ -42,6 +43,7 @@ const PAGE_LABELS = {
   '/voice-agent':   'Voice Agent',
   '/upload':        'Upload Files',
   '/upload-url':    'Upload URL',
+  '/upload-pdf':    'Upload PDF',
   '/knowledge-hub': 'Knowledge Hub',
   '/docupedia':     'Docupedia',
   '/sharepoint':    'SharePoint',

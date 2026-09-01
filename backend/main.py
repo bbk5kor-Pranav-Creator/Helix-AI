@@ -16,7 +16,7 @@ os.makedirs("uploads", exist_ok=True)
 from database import init_db
 init_db()
 
-from routers import resources, files, voice, knowledge, url
+from routers import resources, files, voice, knowledge, url, pdf
 
 app = FastAPI(title="Bosch Knowledge Agent API", version="2.0.0")
 
@@ -29,6 +29,7 @@ app.include_router(files.router,      prefix="/api")
 app.include_router(voice.router,      prefix="/api")
 app.include_router(knowledge.router,  prefix="/api")
 app.include_router(url.router,        prefix="/api")
+app.include_router(pdf.router,        prefix="/api")
 
 @app.get("/api/health")
 def health(): return {"status": "ok", "version": "2.0.0"}

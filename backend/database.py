@@ -154,6 +154,27 @@ def init_db():
 
 
         # =====================================================
+        # NEW: PDF ANALYSIS HISTORY
+        # =====================================================
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS pdf_analyses (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename          TEXT NOT NULL,
+                title             TEXT,
+                instruction       TEXT,
+                answer            TEXT,
+                chunks_json       TEXT,
+                chunks_used       INTEGER DEFAULT 0,
+                model             TEXT,
+                extraction_method TEXT,
+                page_count        INTEGER,
+                created_at        TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
+
+        # =====================================================
         # NEW: WEBSITE CHAT SESSIONS
         # =====================================================
 
@@ -171,6 +192,14 @@ def init_db():
         try:
             conn.execute(
                 "ALTER TABLE website_sessions ADD COLUMN analysis_id INTEGER"
+            )
+        except Exception:
+            pass
+
+        # Distinguishes which analysis table `analysis_id` refers to: 'website' or 'pdf'.
+        try:
+            conn.execute(
+                "ALTER TABLE website_sessions ADD COLUMN source_type TEXT DEFAULT 'website'"
             )
         except Exception:
             pass
