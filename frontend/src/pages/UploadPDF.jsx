@@ -3,6 +3,7 @@ import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { motion, AnimatePresence } from 'framer-motion'
+import { markdownToPdfHtml } from '../utils/pdfExportFormat'
 
 import {
   Box,
@@ -220,7 +221,7 @@ export default function UploadPDF() {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;')
 
-    const formattedAnswer = escapeHtml(result.answer).replace(/\r?\n/g, '<br/>')
+    const formattedAnswer = markdownToPdfHtml(result.answer)
 
     const printFrame = document.createElement('iframe')
     printFrame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
@@ -244,6 +245,10 @@ export default function UploadPDF() {
             .label { color: #505965; font-weight: 700; }
             h2 { margin: 0 0 10px; color: #dc2626; font-size: 14pt; }
             .answer { overflow-wrap: anywhere; }
+            .answer p { margin: 0 0 10px; }
+            .answer .pdf-heading { margin: 18px 0 8px; color: #dc2626; font-weight: 700; font-size: 12.5pt; }
+            .answer ul, .answer ol { margin: 0 0 12px; padding-left: 22px; }
+            .answer li { margin: 0 0 6px; }
             .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #d9dee5; color: #747c87; font-size: 8.5pt; }
           </style>
         </head>
