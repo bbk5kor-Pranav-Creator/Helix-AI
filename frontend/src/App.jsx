@@ -11,6 +11,7 @@ import UploadFiles from './pages/UploadFiles'
 import UploadURL from './pages/UploadURL'
 import UploadPDF from './pages/UploadPDF'
 import KnowledgeHub from './pages/KnowledgeHub'
+import KnowledgeIntelligence from './pages/KnowledgeIntelligence'
 import ResourcePage from './pages/ResourcePage'
 
 const theme = createTheme({
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/upload-url" element={<UploadURL />} />
             <Route path="/upload-pdf" element={<UploadPDF />} />
             <Route path="knowledge-hub" element={<KnowledgeHub />} />
+            <Route path="knowledge-intelligence" element={<KnowledgeIntelligence />} />
             {RESOURCE_PAGES.map(p => (
               <Route key={p.path} path={p.path}
                 element={<ResourcePage resourceKey={p.path} label={p.label} />} />

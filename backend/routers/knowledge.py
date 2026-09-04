@@ -1,9 +1,13 @@
 """
 knowledge.py — Knowledge base query and stats routes
 """
+import json
+
 from fastapi import APIRouter
+from pydantic import BaseModel
 from database import db
 from collections import defaultdict
+from services.knowledge_intelligence_service import extract_knowledge
 
 router = APIRouter()
 
@@ -71,3 +75,145 @@ def summary_overview():
         "domains":         domains,
         "latest_date":     days[-1] if days else None,
     }
+
+
+# =========================================================
+# Knowledge Intelligence
+# =========================================================
+
+class KnowledgeIntelligenceRequest(BaseModel):
+    source_type: str = "website"
+    analysis_id: int
+    force_refresh: bool = False
+
+
+def _get_analysis_source(conn, source_type: str, analysis_id: int):
+    """Look up a saved analysis row from url_analyses or pdf_analyses."""
+
+    if source_type == "pdf":
+        row = conn.execute(
+            """
+            SELECT id, filename AS ref, title, chunks_json
+            FROM pdf_analyses
+            WHERE id = ?
+            """,
+            (analysis_id,)
+        ).fetchone()
+    else:
+        row = conn.execute(
+            """
+            SELECT id, url AS ref, title, chunks_json
+            FROM url_analyses
+            WHERE id = ?
+            """,
+            (analysis_id,)
+        ).fetchone()
+
+    return dict(row) if row else None
+
+
+def _get_cached_knowledge(conn, source_type: str, analysis_id: int):
+    row = conn.execute(
+        """
+        SELECT knowledge_json
+        FROM knowledge_intelligence
+        WHERE source_type = ? AND analysis_id = ?
+        """,
+        (source_type, analysis_id)
+    ).fetchone()
+
+    return json.loads(row["knowledge_json"]) if row else None
+
+
+def _save_knowledge_cache(conn, source_type: str, analysis_id: int, knowledge: dict):
+    conn.execute(
+        """
+        INSERT INTO knowledge_intelligence
+            (source_type, analysis_id, knowledge_json, model, updated_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(source_type, analysis_id) DO UPDATE SET
+            knowledge_json = excluded.knowledge_json,
+            model          = excluded.model,
+            updated_at     = datetime('now')
+        """,
+        (source_type, analysis_id, json.dumps(knowledge), None)
+    )
+
+
+@router.post("/knowledge/intelligence")
+def get_knowledge_intelligence(request: KnowledgeIntelligenceRequest):
+    """
+    Extract structured knowledge (topics, entities, systems, tools,
+    relationships, etc.) from an already-analyzed URL or PDF source.
+    """
+
+    source_type = "pdf" if (request.source_type or "").strip().lower() == "pdf" else "website"
+    analysis_id = request.analysis_id
+
+    try:
+        with db() as conn:
+
+            source = _get_analysis_source(conn, source_type, analysis_id)
+
+            if not source:
+                return {
+                    "success": False,
+                    "message": "Source not found."
+                }
+
+            if not source.get("chunks_json"):
+                return {
+                    "success": False,
+                    "message": "This source has no extracted content available."
+                }
+
+            if not request.force_refresh:
+                cached = _get_cached_knowledge(conn, source_type, analysis_id)
+
+                if cached is not None:
+                    return {
+                        "success": True,
+                        "cached": True,
+                        "source": {
+                            "title": source.get("title") or "",
+                            "url": source.get("ref") or "",
+                            "source_type": source_type
+                        },
+                        "knowledge": cached
+                    }
+
+            chunks = json.loads(source["chunks_json"])
+
+            knowledge = extract_knowledge(
+                chunks=chunks,
+                title=source.get("title") or "",
+                source_url=source.get("ref") or "",
+                source_type=source_type
+            )
+
+            _save_knowledge_cache(conn, source_type, analysis_id, knowledge)
+
+        return {
+            "success": True,
+            "cached": False,
+            "source": {
+                "title": source.get("title") or "",
+                "url": source.get("ref") or "",
+                "source_type": source_type
+            },
+            "knowledge": knowledge
+        }
+
+    except ValueError as exc:
+        return {
+            "success": False,
+            "message": str(exc)
+        }
+
+    except Exception as exc:
+        print("Knowledge Intelligence error:", str(exc))
+        return {
+            "success": False,
+            "message": "Helix AI could not extract structured knowledge for this source."
+        }
+

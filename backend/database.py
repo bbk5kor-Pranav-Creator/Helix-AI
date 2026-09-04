@@ -266,6 +266,28 @@ def init_db():
         """)
 
 
+        # =====================================================
+        # NEW: KNOWLEDGE INTELLIGENCE (cached structured extraction)
+        # =====================================================
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS knowledge_intelligence (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_type    TEXT NOT NULL,
+                analysis_id    INTEGER NOT NULL,
+                knowledge_json TEXT NOT NULL,
+                model          TEXT,
+                created_at     TEXT DEFAULT (datetime('now')),
+                updated_at     TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
+        conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_ki_source
+            ON knowledge_intelligence(source_type, analysis_id)
+        """)
+
+
     print(
         "[DB] SQLite initialized at",
         DB_PATH
