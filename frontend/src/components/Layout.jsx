@@ -12,7 +12,7 @@ import {
   MenuBook, Hub, Dashboard, Language, PictureAsPdf, Insights
 } from '@mui/icons-material'
 
-const SIDEBAR_WIDTH     = 235
+const SIDEBAR_WIDTH     = 280
 const SIDEBAR_COLLAPSED = 64
 
 const NAV_ITEMS = [
@@ -20,8 +20,8 @@ const NAV_ITEMS = [
   { label: 'Text Agent',      path: '/text-agent',    icon: <Chat /> },
   { label: 'Voice Agent',     path: '/voice-agent',   icon: <Mic /> },
   { label: 'Upload Files',    path: '/upload',        icon: <CloudUpload /> },
-  { label: 'Upload URL',      path: '/upload-url',    icon: <Language /> },
-  { label: 'Upload PDF',      path: '/upload-pdf',    icon: <PictureAsPdf /> },
+  { label: 'Web Knowledge Extraction',      path: '/upload-url',    icon: <Language /> },
+  { label: 'Intelligent Document Processing',      path: '/upload-pdf',    icon: <PictureAsPdf /> },
   { label: 'Knowledge Hub',   path: '/knowledge-hub', icon: <Hub /> },
   { label: 'Knowledge Intelligence', path: '/knowledge-intelligence', icon: <Insights /> },
   { type: 'divider', label: 'Resources' },

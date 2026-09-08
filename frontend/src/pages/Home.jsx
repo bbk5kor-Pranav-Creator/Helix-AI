@@ -7,7 +7,7 @@ import {
 import {
   Chat, Mic, CloudUpload, Hub, ArrowForward,
   Psychology, Speed, Storage, Security,
-  CheckCircle, TrendingUp, Groups
+  CheckCircle, TrendingUp, Groups, Description
 } from '@mui/icons-material'
 import axios from 'axios'
 
@@ -18,7 +18,10 @@ const FEATURES = [
   { icon: <Security sx={{ fontSize: 28, color: '#f59e0b' }} />, title: 'Document Context', desc: 'Upload PDFs and images — Alex reads them and uses that knowledge to ask smarter, role-specific follow-up questions.' },
   { icon: <Groups sx={{ fontSize: 28, color: '#ec4899' }} />, title: 'Multi-Employee Support', desc: 'Interview multiple employees in parallel. Each session is tracked separately with full conversation history.' },
   { icon: <TrendingUp sx={{ fontSize: 28, color: '#06b6d4' }} />, title: 'Knowledge Analytics', desc: 'Browse the Knowledge Hub for topic-wise, date-wise, and user-wise summaries with confidence scoring.' },
-]
+  { icon: <CloudUpload sx={{ fontSize: 28, color: '#14b8a6' }} />, title: 'Web Knowledge Extraction', desc: 'Analyse web pages and URLs to extract useful information and make external knowledge searchable.' }, 
+  { icon: <Description sx={{ fontSize: 28, color: '#f97316' }} />, title: 'Intelligent Document Processing', desc: 'Upload PDF documents and automatically extract their content for analysis, retrieval, and contextual understanding.' }, 
+  { icon: <Hub sx={{ fontSize: 28, color: '#a855f7' }} />, title: 'Knowledge Intelligence', desc: 'Transform extracted knowledge into topics, entities, processes, relationships, risks, and actionable insights.' },
+] 
 
 const AGENT_CARDS = [
   {
